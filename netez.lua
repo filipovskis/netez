@@ -87,7 +87,7 @@ function HANDLER:CheckArguments(tbl)
             return false
         end
 
-        local valid = netez.checkByType(type, value)
+        local valid = netez.CheckByType(type, value)
 
         if valid ~= true and not optional and not isEmpty then
             print("Argument #" .. i .. " is invalid")
@@ -118,7 +118,7 @@ end
 
 -- ANCHOR Functions
 
-local function pack(...)
+local function Pack(...)
     local result = {}
     local count = select("#", ...)
 
@@ -135,7 +135,7 @@ local function pack(...)
     return result
 end
 
-local function unpack(tbl)
+local function Unpack(tbl)
     if not table.IsEmpty(tbl) then
         local value = table.remove(tbl, 1)
 
@@ -143,14 +143,14 @@ local function unpack(tbl)
             value = nil
         end
 
-        return value, unpack(tbl)
+        return value, Unpack(tbl)
     end
 end
 
 ---Creates a new type for fields
 ---@param type string
 ---@param checker function
-function netez.createType(type, checker)
+function netez.CreateType(type, checker)
     netez.types[type] = checker
 end
 
@@ -158,7 +158,7 @@ end
 ---@param type string
 ---@param any any
 ---@return boolean
-function netez.checkByType(type, any)
+function netez.CheckByType(type, any)
     local checker = netez.types[type]
 
     if checker then
@@ -171,7 +171,7 @@ end
 ---Registers a new handler for network message receiving
 ---@param id string
 ---@return userdata
-function netez.register(id)
+function netez.Register(id)
     local handler = setmetatable({}, HANDLER)
 
     handler.id = id
@@ -185,22 +185,22 @@ end
 
 ---Deletes the handler by id
 ---@param id string
-function netez.delete(id)
+function netez.Delete(id)
     netez.storage[id] = nil
 end
 
-function netez.getHandler(id)
+function netez.GetHandler(id)
     return netez.storage[id]
 end
 
 do
-    local send
+    local Send
 
-    local function start(id, ...)
+    local function Start(id, ...)
         assert(id)
 
-        local packed = pack(...)
-        local data = pon.encode(packed)
+        local Packed = Pack(...)
+        local data = pon.encode(Packed)
         local length = #data
 
         net.Start(netString)
@@ -211,7 +211,7 @@ do
     end
 
     if SERVER then
-        send = function(ply)
+        Send = function(ply)
             if ply then
                 net.Send(ply)
             else
@@ -219,16 +219,16 @@ do
             end
         end
 
-        function netez.send(ply, id, ...)
-            start(id, ...)
-            send(ply)
+        function netez.Send(ply, id, ...)
+            Start(id, ...)
+            Send(ply)
         end
     else
-        send = net.SendToServer
+        Send = net.SendToServer
 
-        function netez.send(id, ...)
-            start(id, ...)
-            send()
+        function netez.Send(id, ...)
+            Start(id, ...)
+            Send()
         end
     end
 end
@@ -240,7 +240,7 @@ net.Receive("netez:Send", function(len, ply)
     local length = net.ReadUInt(16)
     local data = net.ReadData(length)
 
-    local handler = netez.getHandler(id)
+    local handler = netez.GetHandler(id)
 
     if handler then
         local allowed = handler:CheckPlayer(ply)
@@ -251,9 +251,9 @@ net.Receive("netez:Send", function(len, ply)
 
             if isDataValid then
                 if SERVER then
-                    handler(ply, unpack(decodedData))
+                    handler(ply, Unpack(decodedData))
                 else
-                    handler(unpack(decodedData))
+                    handler(Unpack(decodedData))
                 end
 
                 handler:OnSuccess(ply)
@@ -268,69 +268,30 @@ local PLAYER = FindMetaTable("Player")
 local VECTOR = FindMetaTable("Vector")
 local ANGLE = FindMetaTable("Angle")
 
-local function isPlayer(any)
+local function IsPlayer(any)
     return getmetatable(any) == PLAYER
 end
 
-local function isVector(any)
+local function IsVector(any)
     return getmetatable(any) == VECTOR
 end
 
-local function isAngle(any)
+local function IsAngle(any)
     return getmetatable(any) == ANGLE
 end
 
-netez.createType("player", isPlayer)
-netez.createType("vector", isVector)
-netez.createType("angle", isAngle)
-netez.createType("string", isstring)
-netez.createType("table", istable)
-netez.createType("entity", isentity)
-netez.createType("bool", isbool)
-netez.createType("int", isnumber)
-netez.createType("uint", function(any)
+netez.CreateType("player", IsPlayer)
+netez.CreateType("vector", IsVector)
+netez.CreateType("angle", IsAngle)
+netez.CreateType("string", isstring)
+netez.CreateType("table", istable)
+netez.CreateType("entity", isentity)
+netez.CreateType("bool", isbool)
+netez.CreateType("int", isnumber)
+netez.CreateType("uint", function(any)
     return (isnumber(any) and any >= 0)
 end)
 
-netez.createType("any", function(any)
+netez.CreateType("any", function(any)
     return true
 end)
-
--- ANCHOR Tests
-
--- Case #1 (Clientside -> Serverside)
---[[
-    if SERVER then
-        netez.register("UpdateHealth")
-        :AddField("uint")
-        :SetDelay(3)
-        :SetCallback(function(ply, health)
-            ply:SetHealth(health)
-        end)
-    end
-
-    if CLIENT then
-        concommand.Add("randomhp", function()
-            netez.send("UpdateHealth", math.random(100))
-        end)
-    end
- ]]
-
--- Case #2 (Serverside -> Clientside, multiple fields)
---[[
-if CLIENT then
-    netez.register("Notification")
-    :AddOptionalField("uint")
-    :AddField("string")
-    :AddField("uint")
-    :SetCallback(function(type, text, length)
-        type = type or 0
-
-        notification.AddLegacy(text, type, length)
-    end)
-end
-
-if SERVER then
-    netez.send(nil, "Notification", nil, "Hello everyone", 5)
-end
- ]]
