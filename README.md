@@ -1,11 +1,13 @@
 # NetEz
 NetEz is the net wrapper for Garry's Mod, which simplify networking proccess
 
+Requires [pON](https://github.com/SuperiorServers/dash/blob/master/lua/dash/thirdparty/pon/pon.lua) to work
+
 # Examples
 ### Sending notification to a player from serverside
 ```lua
 if CLIENT then
-  netez.register("Notification")
+  netez.Register("Notification")
   :AddField("string")
   :AddOptionalField("uint")
   :AddField("uint")
@@ -20,7 +22,7 @@ if SERVER then
   local PLAYER = FindMetaTable("Player")
   
   function PLAYER:Notify(text, type, length)
-    netez.send(self, "Notification", text, type, length)
+    netez.Send(self, "Notification", text, type, length)
   end
   
   hook.Add("PlayerSpawn", "Notification", function(ply)
