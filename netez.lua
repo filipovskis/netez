@@ -77,20 +77,20 @@ function HANDLER:CheckArguments(tbl)
     local fields = self:GetFields()
 
     for i, field in ipairs(fields) do
-        local type = field.type
+        local sType = field.type
         local optional = field.optional
         local value = tbl[i]
         local isEmpty = value == nilString
 
         if not optional and isEmpty then
-            print("No argument for required field #" .. i)
+            print(string.format("(%s) No argument for the required field #%i!", self.id, i))
             return false
         end
 
-        local valid = netez.CheckByType(type, value)
+        local valid = netez.CheckByType(sType, value)
 
         if valid ~= true and not optional and not isEmpty then
-            print("Argument #" .. i .. " is invalid")
+            print(string.format("(%s) The argument #%i must be a %s, not a %s!", self.id, i, sType, type(value)))
             return false
         end
     end
